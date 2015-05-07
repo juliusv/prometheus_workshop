@@ -8,9 +8,7 @@ import (
 	"time"
 )
 
-var (
-	oscillationPeriod = flag.Duration("oscillation-period", 5*time.Minute, "The duration of the rate oscillation period.")
-)
+var oscillationPeriod = flag.Duration("oscillation-period", 5*time.Minute, "The duration of the rate oscillation period.")
 
 func startClient(servAddr string) {
 	start := time.Now()

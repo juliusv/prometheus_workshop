@@ -9,10 +9,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var (
+const (
 	namespace = "codelab"
 	subsystem = "api"
+)
 
+var (
 	requestHistogram = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Namespace: namespace,
