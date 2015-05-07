@@ -21,7 +21,7 @@ var (
 			Subsystem: subsystem,
 			Name:      "request_duration_seconds",
 			Help:      "A summary over the API HTTP request durations in seconds.",
-			Buckets:   prometheus.ExponentialBuckets(0.0001, 1.5, 15),
+			Buckets:   prometheus.ExponentialBuckets(0.005, 1.2, 15),
 		},
 		[]string{"method", "path", "status"},
 	)
@@ -47,21 +47,21 @@ type responseOpts struct {
 var opts = map[string]map[string]responseOpts{
 	"/api/foo": map[string]responseOpts{
 		"GET": responseOpts{
-			baseLatency: 2 * time.Millisecond,
+			baseLatency: 10 * time.Millisecond,
 			errorRatio:  0.005,
 		},
 		"POST": responseOpts{
-			baseLatency: 10 * time.Millisecond,
+			baseLatency: 20 * time.Millisecond,
 			errorRatio:  0.02,
 		},
 	},
 	"/api/bar": map[string]responseOpts{
 		"GET": responseOpts{
-			baseLatency: 5 * time.Millisecond,
+			baseLatency: 15 * time.Millisecond,
 			errorRatio:  0.0025,
 		},
 		"POST": responseOpts{
-			baseLatency: 20 * time.Millisecond,
+			baseLatency: 50 * time.Millisecond,
 			errorRatio:  0.01,
 		},
 	},
@@ -100,7 +100,7 @@ func handleAPI(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	time.Sleep(methodOpts.baseLatency + time.Duration(rand.NormFloat64()*float64(time.Millisecond))*5)
+	time.Sleep(methodOpts.baseLatency + time.Duration(rand.NormFloat64()*float64(time.Millisecond))*10)
 	if rand.Float64() <= methodOpts.errorRatio {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
