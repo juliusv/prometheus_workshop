@@ -41,28 +41,28 @@ func init() {
 
 type responseOpts struct {
 	baseLatency time.Duration
-	errorPct    float64
+	errorRatio  float64
 }
 
 var opts = map[string]map[string]responseOpts{
 	"/api/foo": map[string]responseOpts{
 		"GET": responseOpts{
 			baseLatency: 2 * time.Millisecond,
-			errorPct:    0.5,
+			errorRatio:  0.005,
 		},
 		"POST": responseOpts{
 			baseLatency: 10 * time.Millisecond,
-			errorPct:    2,
+			errorRatio:  0.02,
 		},
 	},
 	"/api/bar": map[string]responseOpts{
 		"GET": responseOpts{
 			baseLatency: 5 * time.Millisecond,
-			errorPct:    .25,
+			errorRatio:  0.0025,
 		},
 		"POST": responseOpts{
 			baseLatency: 20 * time.Millisecond,
-			errorPct:    1,
+			errorRatio:  0.01,
 		},
 	},
 }
@@ -89,7 +89,6 @@ func handleInstrumentedAPI(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleAPI(w http.ResponseWriter, r *http.Request) {
-
 	pathOpts, ok := opts[r.URL.Path]
 	if !ok {
 		http.Error(w, "Not Found", http.StatusNotFound)
@@ -102,7 +101,7 @@ func handleAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	time.Sleep(methodOpts.baseLatency + time.Duration(rand.NormFloat64()*float64(time.Millisecond))*5)
-	if rand.Float64()*100 <= methodOpts.errorPct {
+	if rand.Float64() <= methodOpts.errorRatio {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }
