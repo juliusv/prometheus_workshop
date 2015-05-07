@@ -3,6 +3,7 @@ package main
 import (
 	"math/rand"
 	"net/http"
+	_ "net/http/pprof"
 	"strconv"
 	"time"
 
