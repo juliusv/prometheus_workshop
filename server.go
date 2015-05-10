@@ -4,41 +4,8 @@ import (
 	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
-	"strconv"
 	"time"
-
-	"github.com/prometheus/client_golang/prometheus"
 )
-
-const (
-	namespace = "codelab"
-	subsystem = "api"
-)
-
-var (
-	requestHistogram = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Namespace: namespace,
-			Subsystem: subsystem,
-			Name:      "request_duration_seconds",
-			Help:      "A summary over the API HTTP request durations in seconds.",
-			Buckets:   prometheus.ExponentialBuckets(0.005, 1.2, 15),
-		},
-		[]string{"method", "path", "status"},
-	)
-	requestsInProgress = prometheus.NewGauge(
-		prometheus.GaugeOpts{
-			Namespace: namespace,
-			Subsystem: subsystem,
-			Name:      "http_requests_inprogress",
-			Help:      "The current number of API HTTP requests in progress.",
-		})
-)
-
-func init() {
-	prometheus.MustRegister(requestHistogram)
-	prometheus.MustRegister(requestsInProgress)
-}
 
 type responseOpts struct {
 	baseLatency time.Duration
@@ -66,27 +33,6 @@ var opts = map[string]map[string]responseOpts{
 			errorRatio:  0.01,
 		},
 	},
-}
-
-type statusLoggingResponseWriter struct {
-	status int
-	http.ResponseWriter
-}
-
-func (w *statusLoggingResponseWriter) WriteHeader(code int) {
-	w.status = code
-	w.ResponseWriter.WriteHeader(code)
-}
-
-func handleInstrumentedAPI(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
-	requestsInProgress.Inc()
-
-	lw := statusLoggingResponseWriter{http.StatusOK, w}
-	handleAPI(&lw, r)
-
-	requestHistogram.WithLabelValues(r.Method, r.URL.Path, strconv.Itoa(lw.status)).Observe(float64(time.Since(start)) / float64(time.Second))
-	requestsInProgress.Dec()
 }
 
 func handleAPI(w http.ResponseWriter, r *http.Request) {
