@@ -41,13 +41,14 @@ Start Prometheus. By default, Prometheus stores its database in /tmp/metrics
 ```
 
 Prometheus should start up and it should show a status page about itself at
-http://localhost:9090/. In the *Status* section, you will find
-http://localhost:9090/metrics in the list of scraped targets. Give Prometheus a
-couple of seconds to start collecting data about itself from its own HTTP
-metrics endpoint.
+[http://localhost:9090/](http://localhost:9090/). In the *Status* section, you
+will find [http://localhost:9090/metrics](http://localhost:9090/metrics) in the
+list of scraped targets. Give Prometheus a couple of seconds to start
+collecting data about itself from its own HTTP metrics endpoint.
 
 You can also verify that Prometheus is serving metrics about itself by
-navigating to its metrics exposure endpoint: http://localhost:9090/metrics.
+navigating to its metrics exposure endpoint:
+[http://localhost:9090/metrics](http://localhost:9090/metrics).
 
 By default, Prometheus will only use at most one OS thread at a time. In
 production scenarios on multi-CPU machines, you will most likely achieve better
@@ -59,14 +60,15 @@ GOMAXPROCS=8 ./prometheus -config.file=prometheus.conf
 ```
 
 ## Using the expression browser
-The query interface at http://localhost:9090/graph allows you to explore metric
-data collected by the Prometheus server. At the moment, the server is only
-scraping itself. The collected metrics are already quite interesting, though.
-The *Console* tab shows the most recent value of metrics, while the *Graph* tab
-plots values over time. The latter can be quite expensive (for both the server
-and the browser). It is in general a good idea to try potentially expensive
-expressions in the *Console* tab first. Take a bit of time to play with the
-expression browser. Suggestions:
+The query interface at
+[http://localhost:9090/graph](http://localhost:9090/graph) allows you to
+explore metric data collected by the Prometheus server. At the moment, the
+server is only scraping itself. The collected metrics are already quite
+interesting, though.  The *Console* tab shows the most recent value of metrics,
+while the *Graph* tab plots values over time. The latter can be quite expensive
+(for both the server and the browser). It is in general a good idea to try
+potentially expensive expressions in the *Console* tab first. Take a bit of
+time to play with the expression browser. Suggestions:
 
 * Evaluate `prometheus_local_storage_ingested_samples_total`, which shows you
   the total number of ingested samples over the lifetime of the server. In the
@@ -402,7 +404,8 @@ Console templates are a built-in dashboarding system in the Prometheus server.
 They are based on Go's templating language, which is more strongly typed than a
 typical web templating engine.
 
-You can see an example at http://localhost:9090/consoles/node.html.
+You can see an example at
+[http://localhost:9090/consoles/node.html](http://localhost:9090/consoles/node.html).
 
 Task: Create a dashboard of QPS, latency, and "up" servers for the Go/Python
 code you instrumented above.
@@ -419,11 +422,11 @@ configured Prometheus servers.
 
 For the purposes of this workshop, we provide a shared PromDash server for you
 at http://demo-node.prometheus.io:3000/. It already has one Prometheus server
-configured as a data source: http://localhost:9090/. This server should work
-for everyone to build dashboards against their locally running Prometheus
-servers (if you browse the web from a different host than where you are running
-your test Prometheus server, you might need to create a new server entry at
-http://demo-node.prometheus.io:3000/servers).
+configured as a data source: [http://localhost:9090/](http://localhost:9090/).
+This server should work for everyone to build dashboards against their locally
+running Prometheus servers (if you browse the web from a different host than
+where you are running your test Prometheus server, you might need to create a
+new server entry at http://demo-node.prometheus.io:3000/servers).
 
 Let's create a dashboard to monitor the health of the Prometheus instance
 itself:
@@ -506,7 +509,8 @@ With instrumentation and a meaningful dashboard in place, the time is ripe to
 think about alerting.  Alerting rules are set up similarly to recording rules.
 See documentation at http://prometheus.io/docs/querying/rules/#alerting-rules.
 You can inspect the status of configured alerts in the Alerts section of the
-Prometheus server's status page http://localhost:9090/alerts. However, for
+Prometheus server's status page
+[http://localhost:9090/alerts](http://localhost:9090/alerts). However, for
 proper notifications, you need to set up an Alertmanager. See
 https://github.com/prometheus/alertmanager.
 
