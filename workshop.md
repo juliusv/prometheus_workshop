@@ -490,7 +490,7 @@ performed against your Prometheus server per second:
 
 Your dashboard should now look somewhat like this:
 
-[TODO image]
+[![PromDash screenshot](/images/promdash.png)](#promdash)
 
 PromDash supports many more features which we will not be able to explore in
 this workshop. For example:
