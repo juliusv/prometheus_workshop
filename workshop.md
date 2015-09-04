@@ -1,8 +1,3 @@
----
-title: Prometheus Workshop
-sort_rank: 3
----
-
 # Getting started
 
 ## Getting Prometheus
