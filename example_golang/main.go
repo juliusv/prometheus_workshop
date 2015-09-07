@@ -4,12 +4,17 @@ import (
 	"flag"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/justinas/alice"
 	"github.com/streadway/handy/report"
 )
 
-var addr = flag.String("listen-address", ":8080", "The address to listen on for HTTP requests.")
+var (
+	addr = flag.String("listen-address", ":8080", "The address to listen on for HTTP requests.")
+
+	start = time.Now()
+)
 
 func main() {
 	flag.Parse()
