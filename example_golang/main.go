@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/justinas/alice"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/streadway/handy/report"
 )
 
@@ -20,6 +21,7 @@ func main() {
 	flag.Parse()
 
 	http.HandleFunc("/api/", handleAPI)
+	http.Handle("/metrics", prometheus.Handler())
 
 	// Log every received HTTP request to stdout.
 	go http.ListenAndServe(*addr, alice.New(

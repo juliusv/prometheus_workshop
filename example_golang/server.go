@@ -1,11 +1,42 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
+
+var (
+	namespace = "codelab"
+	subsystem = "api"
+
+	requestHistogram = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: namespace,
+			Subsystem: subsystem,
+			Name:      "request_duration_seconds",
+			Help:      "A histogram of the API HTTP request durations in seconds.",
+			Buckets:   prometheus.ExponentialBuckets(0.0001, 1.5, 25),
+		},
+		[]string{"method", "path", "status"},
+	)
+	requestsInProgress = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Namespace: namespace,
+			Subsystem: subsystem,
+			Name:      "http_requests_in_progress",
+			Help:      "The current number of API HTTP requests in progress.",
+		})
+)
+
+func init() {
+	prometheus.MustRegister(requestHistogram)
+	prometheus.MustRegister(requestsInProgress)
+}
 
 type responseOpts struct {
 	baseLatency time.Duration
@@ -47,14 +78,29 @@ var opts = map[string]map[string]responseOpts{
 }
 
 func handleAPI(w http.ResponseWriter, r *http.Request) {
+	begun := time.Now()
+	requestsInProgress.Inc()
+	status := http.StatusOK
+
+	defer func() {
+		requestsInProgress.Dec()
+		requestHistogram.With(prometheus.Labels{
+			"method": r.Method,
+			"path":   r.URL.Path,
+			"status": fmt.Sprint(status),
+		}).Observe(time.Since(begun).Seconds())
+	}()
+
 	pathOpts, ok := opts[r.URL.Path]
 	if !ok {
-		http.Error(w, "Not Found", http.StatusNotFound)
+		status = http.StatusNotFound
+		http.Error(w, fmt.Sprintf("Path %q not found.", r.URL.Path), status)
 		return
 	}
 	methodOpts, ok := pathOpts[r.Method]
 	if !ok {
-		http.Error(w, "Method not Allowed", http.StatusMethodNotAllowed)
+		status = http.StatusMethodNotAllowed
+		http.Error(w, fmt.Sprintf("Method %q not allowed.", r.Method), status)
 		return
 	}
 
@@ -68,6 +114,7 @@ func handleAPI(w http.ResponseWriter, r *http.Request) {
 		(methodOpts.baseLatency + time.Duration(rand.NormFloat64()*float64(methodOpts.baseLatency)/10)) * latencyFactor,
 	)
 	if rand.Float64() <= methodOpts.errorRatio*errorFactor {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		status = http.StatusInternalServerError
+		http.Error(w, "Fake error to test monitoring.", status)
 	}
 }
