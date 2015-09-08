@@ -11,7 +11,6 @@ import (
 var oscillationPeriod = flag.Duration("oscillation-period", 5*time.Minute, "The duration of the rate oscillation period.")
 
 func startClient(servAddr string) {
-	start := time.Now()
 
 	oscillationFactor := func() float64 {
 		return 2 + math.Sin(math.Sin(2*math.Pi*float64(time.Since(start))/float64(*oscillationPeriod)))
