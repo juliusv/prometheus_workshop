@@ -12,9 +12,15 @@ Example for Linux:
 ```
 mkdir prometheus
 cd prometheus
-wget https://github.com/prometheus/prometheus/releases/download/0.13.2/prometheus-0.13.2.linux-amd64.tar.gz
-tar xfvz prometheus-0.13.2.linux-amd64.tar.gz
+wget https://github.com/prometheus/prometheus/releases/download/0.15.1/prometheus-0.15.1.linux-amd64.tar.gz
+tar xfvz prometheus-0.15.1.linux-amd64.tar.gz
 ```
+
+_Note: The archive contains two binaries, `promtool` and `prometheus`
+(of which we will use only the latter for now) and a number of console
+templates (which you can ignore for now). The archive does not unpack
+into a separate sub-directory, but this behavior will change in the
+future._
 
 ## Configuring Prometheus to monitor itself
 Download the example configuration:
@@ -33,11 +39,15 @@ While a Prometheus server which collects only data about itself is not very
 useful in practice, it is a good starting example.
 
 ## Starting Prometheus
-Start Prometheus. By default, Prometheus stores its database in /tmp/metrics
-(flag `-storage.local.path`).
+
+Start Prometheus. By default, Prometheus reads its config from a file
+called `prometheus.yml` in the current working directory, and it
+stores its database in a sub-directory called `data`, again relative
+to the current working directory. Both behaviors can be changed using
+the flags `-config.file` or `-storage.local.path`, respectively.
 
 ```
-./prometheus -config.file=prometheus.conf
+./prometheus -config.file=prometheus.yml -storage.local.path=data
 ```
 
 Prometheus should start up and it should show a status page about itself at
@@ -56,8 +66,10 @@ performance by setting the `GOMAXPROCS` environment variable to a value similar
 to the number of available CPU cores:
 
 ```
-GOMAXPROCS=8 ./prometheus -config.file=prometheus.conf
+GOMAXPROCS=8 ./prometheus
 ```
+
+_Note: With Go 1.5+, `GOMAXPROCS` will be set automatically._
 
 ## Using the expression browser
 The query interface at
@@ -73,7 +85,7 @@ time to play with the expression browser. Suggestions:
 * Evaluate `prometheus_local_storage_ingested_samples_total`, which shows you
   the total number of ingested samples over the lifetime of the server. In the
   *Graph* tab, it will show as steadily increasing.
-* `The expression prometheus_local_storage_ingested_samples_total[1m]`
+* The expression `prometheus_local_storage_ingested_samples_total[1m]`
   evaluates to all sample values of the metric in the last minute. It cannot be
   plotted as a graph, but in the *Console* tab, you see a list of the values with
   (Unix) timestamp.
@@ -83,7 +95,7 @@ time to play with the expression browser. Suggestions:
   plotted nicely, and it will become more interesting as you add more targets.
 
 ## Start the node exporter
-The node exporter is a server which exposes system statistics about the machine
+The node exporter is a server that exposes system statistics about the machine
 it is running on as Prometheus metrics.
 
 Download the latest node exporter binary release for your platform from:
@@ -99,9 +111,11 @@ Linux example:
 ```
 mkdir node_exporter
 cd node_exporter
-wget https://github.com/prometheus/node_exporter/releases/download/0.8.1/node_exporter-0.8.1.linux-amd64.tar.gz
-tar xvfz node_exporter-0.8.1.linux-amd64.tar.gz
+wget https://github.com/prometheus/node_exporter/releases/download/0.11.0/node_exporter-0.11.0.linux-amd64.tar.gz
+tar xvfz node_exporter-0.11.0.linux-amd64.tar.gz
 ```
+
+_Note: The archive contains only one file, the binary `node_exporter`._
 
 Start the node exporter:
 
@@ -110,26 +124,31 @@ Start the node exporter:
 ```
 
 ## Configure Prometheus to monitor the node exporter
-Add the following job configuration to your prometheus.conf to monitor both your own and the provided node exporter:
-
-```
-job: {
-  name: "node"
-  scrape_interval: "15s"
-  target_group: {
-    target: "http://localhost:9100/metrics"
-  }
-}
-```
 
 If you are not running your local node exporter under Linux, you might want to
 point your Prometheus server to a Linux node exporter run by one of your peers
 in the workshop. Or point it to a node exporter we are running during the
-workshop at http://demo-node.prometheus.io:9100/metrics.
+workshop at
+[http://demo-node.prometheus.io:9100/metrics](http://demo-node.prometheus.io:9100/metrics).
 
-Stop your Prometheus server (e.g. kill it with Ctrl+C) and start it up again.
-Config changes still require a server restart to take effect, but this will no
-longer be the case starting at Prometheus version 0.14.0.
+Add the following job configuration to the `scrape_configs:` section
+in `prometheus.yml` to monitor both your own and the demo node
+exporter:
+
+```
+- job_name: 'node'
+  scrape_interval: '15s'
+  target_groups:
+    - targets:
+        - 'http://localhost:9100/metrics'
+        - 'http://demo-node.prometheus.io:9100/metrics'
+```
+
+Send your Prometheus server a `SIGHUP` to initiate a reload of the configuration:
+
+```
+kill -HUP `pgrep prometheus`
+```
 
 Then check the *Status* page of your Prometheus server to make sure the node
 exporter is scraped correctly. Shortly after, a whole lot of interesting
@@ -137,54 +156,50 @@ metrics will show up in the expression browser, each of them starting with
 `node_`. (Reload the page to see them in the autocompletion.) As an example,
 have a look at `node_cpu`.
 
-The node exporter has a whole lot of modules to export machine metrics. Have a
-look at https://github.com/prometheus/node_exporter to get an idea. While
-Prometheus is particularly good at collecting service metrics, correlating
-those with system metrics from individual machines can be immensely helpful.
-(Perhaps that one task that showed high latency yesterday was scheduled on a
-node with a lot of competing disk operations?)
+The node exporter has a whole lot of modules to export machine
+metrics. Have a look at the
+[README.md](https://github.com/prometheus/node_exporter) to get an
+idea. While Prometheus is particularly good at collecting service
+metrics, correlating those with system metrics from individual
+machines can be immensely helpful.  (Perhaps that one task that showed
+high latency yesterday was scheduled on a node with a lot of competing
+disk operations?)
 
 ## Use the node exporter to export the contents of a text file
 The *textfile* module of the node exporter can be used to expose static
 machine-level metrics (such as what role a machine has) or the outcome of
 machine-tied batch jobs (such as a Chef client run). To use it, create a
 directory for the text files to export and (re-)start the node exporter with
-the `--collector.textfile.directory` flag set. Finally, create a text file in
+the `-collector.textfile.directory` flag set. Finally, create a text file in
 that directory.
 
 ```
 mkdir textfile-exports
 ./node_exporter --collector.textfile.directory=textfile-exports
-echo 'role{role="srecon_node_exporter"} 1' > textfile-exports/role.prom.$$
+echo 'role{role="workshop_node_exporter"} 1' > textfile-exports/role.prom.$$
 mv textfile-exports/role.prom.$$ textfile-exports/role.prom
 ```
 
-For details, see https://github.com/prometheus/node_exporter#textfile-collector.
+For details, see the
+[documentation](https://github.com/prometheus/node_exporter#textfile-collector).
 
-## Configuring multiple targets per job
-In a target group, multiple targets can be configured. For example, you might
-want to add a node exporter of a peer in the workshop:
+## Configuring targets with service discovery
 
-```
-job: {
-  name: "node"
-  scrape_interval: "15s"
-  target_group: {
-    target: "http://localhost:9100/metrics"
-    target: "http://192.168.1.113:9100/metrics"
-  }
-}
-```
+Above you have seen how to configure multiple targets. You can also
+have multiple `- targets: [...]` sub-sections in the `target_groups`
+section. (Why? We leave that as an exercise for the reader, you will
+find hints in the
+[documentation](http://prometheus.io/docs/operating/configuration/#target-groups-target_group).)
 
 Prometheus adds an `instance` label with the hostname and port as the value to
 each metric scraped from any target. With that label, you can later aggregate
 or separate metrics from different targets.
 
-In practice, configuring many targets statically is often a maintenance burden.
-The solution is service discovery. Currently, Prometheus supports service
-discovery via DNS SRV records, but support for more methods of service
-discovery is planned for version 0.14.  To try out a DNS SRV record, we have
-created one for `demo-node.prometheus.io`:
+In practice, configuring many targets statically is often a
+maintenance burden.  The solution is service discovery. Currently,
+Prometheus supports service discovery via a number of methods. Here,
+we will look at service discovery via DNS SRV records. To try out a
+DNS SRV record, we have created one for `demo-node.prometheus.io`:
 
 ```
 dig +short SRV demo-node.prometheus.io
@@ -197,21 +212,21 @@ adjusts the targets. To configure a job with DNS service discovery, add the
 following to `prometheus.conf`:
 
 ```
-job {
-  name: "node"
-  sd_name: "demo-node.prometheus.io" # The SRV name.
-  metrics_path: "/metrics" # Need it separate as is not part of the SRV record.
-}
+- job_name: 'discovered_node'
+  dns_sd_configs:
+    - names:
+        - 'demo-node.prometheus.io'
 ```
 
 # The expression language
 
 With more metrics collected by your Prometheus server, it is time to
 familiarize yourself a bit more with the expression language. For comprehensive
-documentation, see http://prometheus.io/docs/querying/basics/. The following is
-meant as an inspiration for how to play with the metrics currently collected by
-your server. Evaluate them in the *Console* and *Graph* tab. For the latter, try
-different time ranges and the *stacked* option.
+documentation, check out the
+[querying chapter](http://prometheus.io/docs/querying/basics/). The following
+is meant as an inspiration for how to play with the metrics currently collected
+by your server. Evaluate them in the *Console* and *Graph* tab. For the latter,
+try different time ranges and the *stacked* option.
 
 ## The `rate()` function
 Prometheus internally organizes sample data in chunks. It performs a number of
@@ -304,10 +319,11 @@ denominator:
 sum(rate(http_request_duration_microseconds_sum[5m])) by (job) / sum(rate(http_request_duration_microseconds_count[5m])) by (job)
 ```
 
-Things become more interesting if the labels do not match perfectly between two
-instant vectors or you want to match vector elements in a many-to-one or
-one-to-many fashion. See
-http://prometheus.io/docs/querying/operators/#vector-matching for details.
+Things become more interesting if the labels do not match perfectly
+between two instant vectors or you want to match vector elements in a
+many-to-one or one-to-many fashion. See the
+[vector-matching section](http://prometheus.io/docs/querying/operators/#vector-matching)
+in the documentation for details.
 
 ## Summaries
 Rather than an average request duration, you will be more often interested in
@@ -323,37 +339,43 @@ percentile request duration. You might be tempted to aggregate the result as
 you have done above. Not possible, unfortunately. Welcome to the wonderland of
 statistics.
 
-Read more at http://prometheus.io/docs/practices/histograms/.
+Read more about
+[histograms and summaries](http://prometheus.io/docs/practices/histograms/)
+in the documentation.
 
 ## Recording rules
 In your practical work with Prometheus at scale, you will pretty soon run into
 expressions that are very expensive and slow to evaluate. The remedy is
 *recording* rules, a way to tell Prometheus to pre-calculate expressions,
 saving the result in a new time series, which can then be used instead of the
-expensive expression. See
-http://prometheus.io/docs/querying/rules/#recording-rules for details and
-http://prometheus.io/docs/practices/rules/ for crucial best practices around
-naming rules.
+expensive expression. See the documentation for details:
+* [General documentation about rules](http://prometheus.io/docs/querying/rules/).
+* [Best practices for naming rules](http://prometheus.io/docs/practices/).
 
 # Instrument code: Go
-*This section is about instrumenting a Go application. If you prefer Python, continue with the next section.*
+
+*This section is about instrumenting a Go application. If you prefer
+ Python, continue with the next section.*
 
 ## The example application
-Get the example application from GitHub:
+
+The example application is in the same GitHub repository as these
+instructions. If you have not done so yet, clone the repository:
 
 ```
 $ cd $GOPATH/src/
 $ mkdir -p github.com/juliusv
 $ cd github.com/juliusv
 $ git clone https://github.com/juliusv/prometheus_workshop.git
-$ cd prometheus_workshop
-$ go get
+$ cd prometheus_workshop/example_golang
+$ go get -d
 $ go build
-$ ./prometheus_workshop
+$ ./example_golang
 ```
 
-Study the code to understand what it is doing. Note that the application is for
-demonstration purposes and implements a server and a client in the same binary.
+Study the code to understand what it is doing. Note that the
+application has been kept very simple for demonstration purposes and
+implements a server and a client in the same binary.
 
 ## Instrument it
 Instrument the server part with Prometheus. Things to keep in mind:
@@ -362,27 +384,45 @@ Instrument the server part with Prometheus. Things to keep in mind:
 * What would be good variable names?
 * How can I instrument in one place rather than many?
 * How can/should I use labels?
-* How to expose the /metrics endpoint?
+* How to expose the `/metrics` endpoint?
 
-The Prometheus Go client library is documented at https://godoc.org/github.com/prometheus/client_golang/prometheus. You will find valuable guidelines about Prometheus instrumentation in general at http://prometheus.io/docs/practices/instrumentation/. Also have a look at the naming guidelines http://prometheus.io/docs/practices/naming/.
+The following links will be helpful:
+* [Documentation for the Prometheus Go client library](https://godoc.org/github.com/prometheus/client_golang/prometheus).
+* [Instrumentation guidelines](http://prometheus.io/docs/practices/instrumentation/).
+* [Naming conventions](http://prometheus.io/docs/practices/naming/).
 
 If you are lost, you can look at instrumented code in the branch called
 `instrumented` in the GitHub repository above. Note that the example
 instrumentation is not necessarily ideal and/or complete.
 
 # Instrument Code: Python
-*This section is about instrumenting a Python application. If you prefer Go,
-continue with the previous section.*
+
+*This section is about instrumenting a Python application. If you
+ prefer Go, continue with the previous section.*
 
 ## The example application
-Get the example application from GitHub:
+
+The example application is in the same GitHub repository as these
+instructions. If you have not done so yet, clone the repository:
+
+```
+$ git clone https://github.com/juliusv/prometheus_workshop.git
+$ cd prometheus_workshop/example_python
+```
+
+Install the Prometheus Python client library:
 
 ```
 $ pip install prometheus_client
-$ git clone https://github.com/brian-brazil/prometheus_workshop_python
 ```
 
 If you don't want to install python libraries globally, pass the `--user` flag to pip.
+
+Run the example application:
+
+```
+$ python main.py
+```
 
 ## Instrument it
 Instrument the client and server with Prometheus. Things to keep in mind:
@@ -393,11 +433,10 @@ Instrument the client and server with Prometheus. Things to keep in mind:
 * How can/should I use labels?
 * How to expose the /metrics endpoint?
 
-The Prometheus Python client library is documented at
-https://github.com/prometheus/client_python#prometheus-python-client. You will
-find valuable guidelines about Prometheus instrumentation in general at
-http://prometheus.io/docs/practices/instrumentation/. Also have a look at the
-naming guidelines http://prometheus.io/docs/practices/naming/.
+The following links will be helpful:
+* [Documentation for the Prometheus Python client library](https://github.com/prometheus/client_python#prometheus-python-client).
+* [Instrumentation guidelines](http://prometheus.io/docs/practices/instrumentation/).
+* [Naming conventions](http://prometheus.io/docs/practices/naming/).
 
 # Dashboard Building: Console Templates
 Console templates are a built-in dashboarding system in the Prometheus server.
@@ -410,9 +449,11 @@ You can see an example at
 Task: Create a dashboard of QPS, latency, and "up" servers for the Go/Python
 code you instrumented above.
 
-Use
-https://github.com/prometheus/prometheus/blob/master/consoles/cassandra.html as
-a base to work off.
+The `consoles` directory that was part of the Prometheus tar-ball
+unpacked above contains a number of examples you can take as a base to
+work off. Look at `cassandra.html` for a start. (You can also access
+the
+[consoles directory on GitHub](https://github.com/prometheus/prometheus/blob/master/consoles/cassandra.html).)
 
 # Dashboard Building: PromDash
 PromDash is a browser-based dashboard builder for Prometheus. It is a Rails
@@ -422,7 +463,7 @@ configured Prometheus servers.
 
 For the purposes of this workshop, we provide a shared PromDash server for you
 at http://demo-node.prometheus.io:3000/. It already has one Prometheus server
-configured as a data source: [http://localhost:9090/](http://localhost:9090/).
+configured as a data source: http://localhost:9090/.
 This server should work for everyone to build dashboards against their locally
 running Prometheus servers (if you browse the web from a different host than
 where you are running your test Prometheus server, you might need to create a
@@ -499,20 +540,21 @@ this workshop. For example:
 * mapping expressions to different axes and setting various axis options
 * building templatized dashboards using template variables
 * adding pie charts, Graphite graphs, or arbitrary web content
-* etc.
 
 For a more comprehensive overview, see the [PromDash
 documentation](http://prometheus.io/docs/visualization/promdash/).
 
 # Alerting
-With instrumentation and a meaningful dashboard in place, the time is ripe to
-think about alerting.  Alerting rules are set up similarly to recording rules.
-See documentation at http://prometheus.io/docs/querying/rules/#alerting-rules.
-You can inspect the status of configured alerts in the Alerts section of the
-Prometheus server's status page
-[http://localhost:9090/alerts](http://localhost:9090/alerts). However, for
-proper notifications, you need to set up an Alertmanager. See
-https://github.com/prometheus/alertmanager.
+
+With instrumentation and a meaningful dashboard in place, the time is
+ripe to think about alerting.  Alerting rules are set up similarly to
+recording rules.  See the
+[section about alerting rules](http://prometheus.io/docs/querying/rules/#alerting-rules)
+in the documentation. You can inspect the status of configured alerts
+in the Alerts section of the Prometheus server's status page
+[http://localhost:9090/alerts](http://localhost:9090/alerts). However,
+for proper notifications, you need to set up an
+[Alertmanager](https://github.com/prometheus/alertmanager).
 
 To play with the Alertmanager, you can download a release from
 https://github.com/prometheus/alertmanager/releases, build one from source
@@ -522,22 +564,36 @@ workshop participants sending alerts to the same Alertmanager, you might run
 into naming collisions.  To point a Prometheus server to an Alertmanager, use
 the `-alertmanager.url` flag.
 
-For meaningful alerting, refer to the best practices section about alerting:
-http://prometheus.io/docs/practices/alerting/.
+For meaningful alerting, refer to the
+[best practices section about alerting](http://prometheus.io/docs/practices/alerting/).
 
-Create a useful alerting rule for your example application, and then change the
-code to simulate an outage triggering the alert.
+Create a useful alerting rule for your example application and try it out. Possible tasks:
+* Create an alert on your service being down. Stop the service and
+  check if and when the alert fires.
+* The example service simulates short outages now and then. Create an
+  alert that will detect them.
+* Modify the code to simulate other kinds of outages and create alerts to
+  detect them.
+* Run the example service multiple times (on different ports). Create
+  alerts that fire if a certain percentage of replicas are down.
+* Create an alert that fires if the disk is predicted to run full
+  within the next six
+  hours. ([Hint](http://www.robustperception.io/reduce-noise-from-disk-space-alerts/)
+  for cheaters.)
+
 
 # Pushing Metrics
-Occasionally, you might need to push metrics that are not machine-related. (The
-latter would be exposed via the `textfile` module of the node exporter, see
-above.) The Pushgateway is a possible solution in that case. Check out the
-details at http://prometheus.io/docs/instrumenting/pushing/. Note that this
-does not change Prometheus's semantics to a push-based model.
+
+Occasionally, you might need to push metrics that are not
+machine-related. (The latter would be exposed via the `textfile`
+module of the node exporter, see above.) The
+[Pushgateway](http://prometheus.io/docs/instrumenting/pushing/) is a
+possible solution in that case. Note that it is not meant to change
+Prometheus's semantics to a push-based model.
 
 To play with the Pushgateway, you can download a release from
 https://github.com/prometheus/pushgateway/releases, build one from source
 yourself, or use the demo Pushgateway we have set up for the duration of the
 workshop at http://demo-node.prometheus.io:9091. Note that with multiple
 workshop participants pushing to the Pushgateway, you will override each
-other's metrics if you are using the same label values for job and instance.
+other's metrics if you are using the same label values for grouping.
