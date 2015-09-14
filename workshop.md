@@ -136,12 +136,12 @@ in `prometheus.yml` to monitor both your own and the demo node
 exporter:
 
 ```
-- job_name: 'node'
-  scrape_interval: '15s'
-  target_groups:
-    - targets:
-        - 'http://localhost:9100/metrics'
-        - 'http://demo-node.prometheus.io:9100/metrics'
+  - job_name: 'node'
+    scrape_interval: '15s'
+    target_groups:
+      - targets:
+          - 'localhost:9100'
+          - 'demo-node.prometheus.io:9100'
 ```
 
 Send your Prometheus server a `SIGHUP` to initiate a reload of the configuration:
