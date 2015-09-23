@@ -561,8 +561,38 @@ https://github.com/prometheus/alertmanager/releases, build one from source
 yourself, or use the demo Alertmanager we have set up for the duration of the
 workshop at http://demo-node.prometheus.io:9093. Note that with multiple
 workshop participants sending alerts to the same Alertmanager, you might run
-into naming collisions.  To point a Prometheus server to an Alertmanager, use
-the `-alertmanager.url` flag.
+into naming collisions.
+
+In the workshop, we will run the Alertmanager without any configured
+notifications, just to see how alerts arrive there. In practice, you want to
+configure one of the many notification methods described
+[in the docmentation](http://prometheus.io/docs/alerting/alertmanager/). Pay
+special attention to the aggregation rules, which allows you to route alerts to
+different destinations.
+
+To point your Prometheus server to an Alertmanager, use the `-alertmanager.url`
+flag.
+
+Alerting rules use the same expression language as used for graphing
+before. Here is an example for a very fundamental alerting rule:
+
+```
+# Alert for any monitored instance that is unreachable for >2 minutes.
+ALERT InstanceDown
+  IF up == 0
+  FOR 2m
+  WITH {
+    severity="page"
+  }
+  SUMMARY "Instance {{$labels.instance}} down"
+  DESCRIPTION "{{$labels.instance}} of job {{$labels.job}} has been down for more than 2 minutes."
+  RUNBOOK "http://sinsip.com/xm.jpg"
+```
+
+Add the rule to a configured rule file, reload the config, and observe the
+_Alerts_ tab on the Prometheus server status page and the _Alerts_ tab on the
+Alertmanager status page while you start and stop jobs monitored by your
+server.
 
 For meaningful alerting, refer to the
 [best practices section about alerting](http://prometheus.io/docs/practices/alerting/).
@@ -580,7 +610,6 @@ Create a useful alerting rule for your example application and try it out. Possi
   within the next six
   hours. ([Hint](http://www.robustperception.io/reduce-noise-from-disk-space-alerts/)
   for cheaters.)
-
 
 # Pushing Metrics
 
