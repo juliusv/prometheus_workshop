@@ -597,3 +597,39 @@ yourself, or use the demo Pushgateway we have set up for the duration of the
 workshop at http://demo-node.prometheus.io:9091. Note that with multiple
 workshop participants pushing to the Pushgateway, you will override each
 other's metrics if you are using the same label values for grouping.
+
+Configure your Prometheus server to scrape the Pushgateway (your own one, or
+the demo Pushgateway, or both). The scrape config for a Pushgateway should have
+`honor_labels` set to `true`. (Later, you can try out what happens if you
+leave it at its default value `false`.)
+
+```
+- job_name: 'pushgateway'
+  scrape_interval: '15s'
+  honor_labels: true
+  target_groups:
+    - targets:
+        - 'http://localhost:9091/metrics'
+        - 'http://demo-node.prometheus.io:9091/metrics'
+```
+
+Prometheus client libraries allow you to push to the Pushgateway, but you can
+also push in a very simple way using `curl`. Imagine a script that runs a
+database backup via some kind of (possibly distributed) cron solution. Upon
+successful completion, it should report the completion timestamp.
+
+```
+#!/bin/bash
+
+set -e
+
+# Some command that creates the backup.
+
+echo "db_backup_last_success_timestamp_seconds $(date +%s)" | curl --data-binary @- http://demo-node.prometheus.io:9091/metrics/job/foo_db
+```
+
+Check the status page of the Pushgateway and its `/metrics` endpoint for the
+pushed metrics, and then observe how it is ingested by Prometheus.  Pay special
+attention to the difference between the scrape timestamp and the timestamp that
+is the value of the metric. How would you graph the age of the backup? How
+would you alert on a backup too old?
