@@ -567,7 +567,7 @@ In the workshop, we will run the Alertmanager without any configured
 notifications, just to see how alerts arrive there. In practice, you want to
 configure one of the many notification methods described
 [in the docmentation](http://prometheus.io/docs/alerting/alertmanager/). Pay
-special attention to the aggregation rules, which allows you to route alerts to
+special attention to the aggregation rules, which allow you to route alerts to
 different destinations.
 
 To point your Prometheus server to an Alertmanager, use the `-alertmanager.url`
