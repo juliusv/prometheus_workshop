@@ -34,6 +34,9 @@ Download the example configuration:
 wget https://raw.githubusercontent.com/prometheus/prometheus/master/documentation/examples/prometheus.yml
 ```
 
+NOTE: If you are using Prometheus 0.15.1 (vs. 0.16.0), you will need to rename
+the `external_labels` option to `labels` in this configuration file.
+
 Take a look at the configuration file. It configures global options, as well as
 a single job to scrape metrics from: the Prometheus server itself.
 
