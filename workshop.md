@@ -9,18 +9,23 @@ Extract the contents into a new directory and change to that directory.
 
 Example for Linux:
 
+If you're using Prometheus 0.16.0, the tarball already extracts into a separate
+sub-directory:
+
+```
+wget https://github.com/prometheus/prometheus/releases/download/0.16.0/prometheus-0.16.0.linux-amd64.tar.gz
+tar xfvz prometheus-0.16.0.linux-amd64.tar.gz
+cd prometheus-0.16.0.linux-amd64
+```
+
+If you're using Prometheus 0.15.1, the tarball does not contain a subdirectory yet:
+
 ```
 mkdir prometheus
 cd prometheus
 wget https://github.com/prometheus/prometheus/releases/download/0.15.1/prometheus-0.15.1.linux-amd64.tar.gz
 tar xfvz prometheus-0.15.1.linux-amd64.tar.gz
 ```
-
-_Note: The archive contains two binaries, `promtool` and `prometheus`
-(of which we will use only the latter for now) and a number of console
-templates (which you can ignore for now). The archive does not unpack
-into a separate sub-directory, but this behavior will change in the
-future._
 
 ## Configuring Prometheus to monitor itself
 Download the example configuration:
