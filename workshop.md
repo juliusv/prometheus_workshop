@@ -473,7 +473,7 @@ Let's create a dashboard to monitor the health of the Prometheus instance
 itself:
 
 1. Head over to http://demo-node.prometheus.io/3000 and click "New Dashboard".
-2. Create a dashboard called "<username>-workshop" (you don't need to select a
+2. Create a dashboard called "&lt;username&gt;-workshop" (you don't need to select a
    directory). PromDash will redirect you to your new, empty dashboard.
 3. Set the "Range" input field just under the dashboard title to "30m" to show
    the last 30 minutes of data in the dashboard (feel free to play with the graph
