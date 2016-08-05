@@ -432,7 +432,8 @@ the
 
 # Dashboard Building: PromDash
 
-TODO: PromDash is deprecated. Replace this section with Grafana.
+TODO: PromDash is deprecated. Replace this section with Grafana. See
+https://prometheus.io/docs/visualization/grafana/
 
 PromDash is a browser-based dashboard builder for Prometheus. It is a Rails
 application and stores its dashboard metadata in a configurable SQL backend.
