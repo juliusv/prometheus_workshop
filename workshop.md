@@ -13,32 +13,16 @@ If you're using Prometheus 0.16.0, the tarball already extracts into a separate
 sub-directory:
 
 ```
-wget https://github.com/prometheus/prometheus/releases/download/0.16.0/prometheus-0.16.0.linux-amd64.tar.gz
-tar xfvz prometheus-0.16.0.linux-amd64.tar.gz
-cd prometheus-0.16.0.linux-amd64
-```
-
-If you're using Prometheus 0.15.1, the tarball does not contain a subdirectory yet:
-
-```
-mkdir prometheus
-cd prometheus
-wget https://github.com/prometheus/prometheus/releases/download/0.15.1/prometheus-0.15.1.linux-amd64.tar.gz
-tar xfvz prometheus-0.15.1.linux-amd64.tar.gz
+wget https://github.com/prometheus/prometheus/releases/download/v1.0.1/prometheus-1.0.1.linux-amd64.tar.gz
+tar xfvz prometheus-1.0.1.linux-amd64.tar.gz
+cd prometheus-1.0.1.linux-amd64
 ```
 
 ## Configuring Prometheus to monitor itself
-Download the example configuration:
 
-```
-wget https://raw.githubusercontent.com/prometheus/prometheus/master/documentation/examples/prometheus.yml
-```
-
-NOTE: If you are using Prometheus 0.15.1 (vs. 0.16.0), you will need to rename
-the `external_labels` option to `labels` in this configuration file.
-
-Take a look at the configuration file. It configures global options, as well as
-a single job to scrape metrics from: the Prometheus server itself.
+Take a look at the included example `prometheus.yml` configuration file. It
+configures global options, as well as a single job to scrape metrics from: the
+Prometheus server itself.
 
 Prometheus collects metrics from monitored targets by scraping metrics HTTP
 endpoints on these targets. Since Prometheus also exposes data in the same
@@ -47,7 +31,6 @@ While a Prometheus server which collects only data about itself is not very
 useful in practice, it is a good starting example.
 
 ## Starting Prometheus
-
 Start Prometheus. By default, Prometheus reads its config from a file
 called `prometheus.yml` in the current working directory, and it
 stores its database in a sub-directory called `data`, again relative
@@ -58,8 +41,8 @@ the flags `-config.file` or `-storage.local.path`, respectively.
 ./prometheus -config.file=prometheus.yml -storage.local.path=data
 ```
 
-Prometheus should start up and it should show a status page about itself at
-[http://localhost:9090/](http://localhost:9090/). In the *Status* section, you
+Prometheus should start up and it should show the targets it scrapes at
+[http://localhost:9090/targets](http://localhost:9090/targets). You
 will find [http://localhost:9090/metrics](http://localhost:9090/metrics) in the
 list of scraped targets. Give Prometheus a couple of seconds to start
 collecting data about itself from its own HTTP metrics endpoint.
@@ -68,20 +51,9 @@ You can also verify that Prometheus is serving metrics about itself by
 navigating to its metrics exposure endpoint:
 [http://localhost:9090/metrics](http://localhost:9090/metrics).
 
-By default, Prometheus will only use at most one OS thread at a time. In
-production scenarios on multi-CPU machines, you will most likely achieve better
-performance by setting the `GOMAXPROCS` environment variable to a value similar
-to the number of available CPU cores:
-
-```
-GOMAXPROCS=8 ./prometheus
-```
-
-_Note: With Go 1.5+, `GOMAXPROCS` will be set automatically._
-
 ## Using the expression browser
 The query interface at
-[http://localhost:9090/graph](http://localhost:9090/graph) allows you to
+[http://localhost:9090/](http://localhost:9090/) allows you to
 explore metric data collected by the Prometheus server. At the moment, the
 server is only scraping itself. The collected metrics are already quite
 interesting, though.  The *Console* tab shows the most recent value of metrics,
@@ -117,13 +89,10 @@ running it on other platforms.
 Linux example:
 
 ```
-mkdir node_exporter
-cd node_exporter
-wget https://github.com/prometheus/node_exporter/releases/download/0.11.0/node_exporter-0.11.0.linux-amd64.tar.gz
-tar xvfz node_exporter-0.11.0.linux-amd64.tar.gz
+wget https://github.com/prometheus/node_exporter/releases/download/0.12.0/node_exporter-0.12.0.linux-amd64.tar.gz
+tar xvfz node_exporter-0.12.0.linux-amd64.tar.gz
+cd node_exporter-0.12.0.linux-amd64
 ```
-
-_Note: The archive contains only one file, the binary `node_exporter`._
 
 Start the node exporter:
 
@@ -137,7 +106,7 @@ If you are not running your local node exporter under Linux, you might want to
 point your Prometheus server to a Linux node exporter run by one of your peers
 in the workshop. Or point it to a node exporter we are running during the
 workshop at
-[http://demo-node.prometheus.io:9100/metrics](http://demo-node.prometheus.io:9100/metrics).
+[http://demo.robustperception.io:9100/metrics](http://demo.robustperception.io:9100/metrics).
 
 Add the following job configuration to the `scrape_configs:` section
 in `prometheus.yml` to monitor both your own and the demo node
@@ -146,16 +115,16 @@ exporter:
 ```
   - job_name: 'node'
     scrape_interval: '15s'
-    target_groups:
+    static_configs:
       - targets:
           - 'localhost:9100'
-          - 'demo-node.prometheus.io:9100'
+          - 'demo.robustperception.io:9100'
 ```
 
 Send your Prometheus server a `SIGHUP` to initiate a reload of the configuration:
 
 ```
-kill -HUP `pgrep prometheus`
+killall -HUP prometheus
 ```
 
 Then check the *Status* page of your Prometheus server to make sure the node
@@ -194,10 +163,8 @@ For details, see the
 ## Configuring targets with service discovery
 
 Above you have seen how to configure multiple targets. You can also
-have multiple `- targets: [...]` sub-sections in the `target_groups`
-section. (Why? We leave that as an exercise for the reader, you will
-find hints in the
-[documentation](http://prometheus.io/docs/operating/configuration/#target-groups-target_group).)
+have multiple `- targets: [...]` sub-sections in the `static_configs`
+section, each with a different set of labels.
 
 Prometheus adds an `instance` label with the hostname and port as the value to
 each metric scraped from any target. With that label, you can later aggregate
@@ -207,23 +174,23 @@ In practice, configuring many targets statically is often a
 maintenance burden.  The solution is service discovery. Currently,
 Prometheus supports service discovery via a number of methods. Here,
 we will look at service discovery via DNS SRV records. To try out a
-DNS SRV record, we have created one for `demo-node.prometheus.io`:
+DNS SRV record, we have created one for `_demo-node._tcp.prometheus.io`:
 
 ```
-dig +short SRV demo-node.prometheus.io
+dig +short SRV _demo-node._tcp.prometheus.io
 ```
 
-Only one host and port is returned (the already known `demo-node.prometheus.io`
+Only one host and port is returned (the already known `_demo-node._tcp.prometheus.io`
 on port 9100), but any number of host/port combinations could be part of the
 SRV record. Prometheus regularly polls the DNS information and dynamically
 adjusts the targets. To configure a job with DNS service discovery, add the
-following to `prometheus.conf`:
+following to `prometheus.yml`:
 
 ```
 - job_name: 'discovered_node'
   dns_sd_configs:
     - names:
-        - 'demo-node.prometheus.io'
+        - '_demo-node._tcp.prometheus.io'
 ```
 
 # The expression language
@@ -464,23 +431,20 @@ the
 [consoles directory on GitHub](https://github.com/prometheus/prometheus/blob/master/consoles/cassandra.html).)
 
 # Dashboard Building: PromDash
+
+TODO: PromDash is deprecated. Replace this section with Grafana.
+
 PromDash is a browser-based dashboard builder for Prometheus. It is a Rails
 application and stores its dashboard metadata in a configurable SQL backend.
 The actual graph data is retrieved by the browser via AJAX requests from the
 configured Prometheus servers.
 
-For the purposes of this workshop, we provide a shared PromDash server for you
-at http://demo-node.prometheus.io:3000/. It already has one Prometheus server
-configured as a data source: http://localhost:9090/.
-This server should work for everyone to build dashboards against their locally
-running Prometheus servers (if you browse the web from a different host than
-where you are running your test Prometheus server, you might need to create a
-new server entry at http://demo-node.prometheus.io:3000/servers).
+Follow the installation procedure at https://github.com/prometheus/promdash/blob/master/README.md.
 
 Let's create a dashboard to monitor the health of the Prometheus instance
 itself:
 
-1. Head over to http://demo-node.prometheus.io:3000 and click "New Dashboard".
+1. Head over to http://localhost:3000 and click "New Dashboard".
 2. Create a dashboard called "&lt;username&gt;-workshop" (you don't need to select a
    directory). PromDash will redirect you to your new, empty dashboard.
 3. Set the "Range" input field just under the dashboard title to "30m" to show
@@ -557,7 +521,7 @@ documentation](http://prometheus.io/docs/visualization/promdash/).
 With instrumentation and a meaningful dashboard in place, the time is
 ripe to think about alerting.  Alerting rules are set up similarly to
 recording rules.  See the
-[section about alerting rules](http://prometheus.io/docs/querying/rules/#alerting-rules)
+[section about alerting rules](https://prometheus.io/docs/alerting/rules/)
 in the documentation. You can inspect the status of configured alerts
 in the Alerts section of the Prometheus server's status page
 [http://localhost:9090/alerts](http://localhost:9090/alerts). However,
@@ -565,11 +529,9 @@ for proper notifications, you need to set up an
 [Alertmanager](https://github.com/prometheus/alertmanager).
 
 To play with the Alertmanager, you can download a release from
-https://github.com/prometheus/alertmanager/releases, build one from source
-yourself, or use the demo Alertmanager we have set up for the duration of the
-workshop at http://demo-node.prometheus.io:9093. Note that with multiple
-workshop participants sending alerts to the same Alertmanager, you might run
-into naming collisions.
+https://github.com/prometheus/alertmanager/releases.
+
+TODO: Alertmanager setup instructions.
 
 In the workshop, we will run the Alertmanager without any configured
 notifications, just to see how alerts arrive there. In practice, you want to
@@ -589,12 +551,14 @@ before. Here is an example for a very fundamental alerting rule:
 ALERT InstanceDown
   IF up == 0
   FOR 2m
-  WITH {
+  LABELS {
     severity="page"
   }
-  SUMMARY "Instance {{$labels.instance}} down"
-  DESCRIPTION "{{$labels.instance}} of job {{$labels.job}} has been down for more than 2 minutes."
-  RUNBOOK "http://sinsip.com/xm.jpg"
+  ANNOTATIONS {
+    runbook = "Instance {{$labels.instance}} down",
+    description = "{{$labels.instance}} of job {{$labels.job}} has been down for more than 2 minutes.",
+    runbook = "http://sinsip.com/xm.jpg"
+  }
 ```
 
 Add the rule to a configured rule file, reload the config, and observe the
@@ -629,25 +593,20 @@ possible solution in that case. Note that it is not meant to change
 Prometheus's semantics to a push-based model.
 
 To play with the Pushgateway, you can download a release from
-https://github.com/prometheus/pushgateway/releases, build one from source
-yourself, or use the demo Pushgateway we have set up for the duration of the
-workshop at http://demo-node.prometheus.io:9091. Note that with multiple
-workshop participants pushing to the Pushgateway, you will override each
-other's metrics if you are using the same label values for grouping.
+https://github.com/prometheus/pushgateway/releases or build one from source
+yourself.
 
-Configure your Prometheus server to scrape the Pushgateway (your own one, or
-the demo Pushgateway, or both). The scrape config for a Pushgateway should have
-`honor_labels` set to `true`. (Later, you can try out what happens if you
-leave it at its default value `false`.)
+Configure your Prometheus server to scrape the Pushgateway. The scrape config
+for a Pushgateway should have `honor_labels` set to `true`. (Later, you can try
+out what happens if you leave it at its default value `false`.)
 
 ```
 - job_name: 'pushgateway'
   scrape_interval: '15s'
   honor_labels: true
-  target_groups:
+  static_configs:
     - targets:
         - 'http://localhost:9091/metrics'
-        - 'http://demo-node.prometheus.io:9091/metrics'
 ```
 
 Prometheus client libraries allow you to push to the Pushgateway, but you can
