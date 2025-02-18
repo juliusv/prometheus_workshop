@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
 import math
-import urllib2
-import thread
+import urllib.request, urllib.error, urllib.parse
+import threading
 import time
 
 OSCILLATION_PERIOD_SECONDS = 300.0
@@ -13,8 +13,8 @@ def send_request(method, path):
     if method == 'POST':
         data = ''
     try:
-        urllib2.urlopen('http://localhost:8081' + path, data)
-    except urllib2.HTTPError:
+        urllib.request.urlopen('http://localhost:8081' + path, data)
+    except urllib.error.HTTPError:
         pass
     except:
         pass
@@ -30,8 +30,8 @@ def request_worker(method, path, sleep):
         time.sleep(sleep * oscillation_factor())
 
 def start_request_workers():
-    thread.start_new_thread(request_worker, ('GET', '/api/foo', .01))
-    thread.start_new_thread(request_worker, ('POST', '/api/foo', .15))
-    thread.start_new_thread(request_worker, ('GET', '/api/bar', .02))
-    thread.start_new_thread(request_worker, ('POST', '/api/foo', .1))
-    thread.start_new_thread(request_worker, ('GET', '/api/nonexistent', .5))
+    threading._start_new_thread(request_worker, ('GET', '/api/foo', .01))
+    threading._start_new_thread(request_worker, ('POST', '/api/foo', .15))
+    threading._start_new_thread(request_worker, ('GET', '/api/bar', .02))
+    threading._start_new_thread(request_worker, ('POST', '/api/foo', .1))
+    threading._start_new_thread(request_worker, ('GET', '/api/nonexistent', .5))

@@ -1,11 +1,13 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import random
 import threading
 import time
-from BaseHTTPServer import BaseHTTPRequestHandler
-from BaseHTTPServer import HTTPServer
-from SocketServer import ThreadingMixIn
+from http.server import BaseHTTPRequestHandler
+from http.server import HTTPServer
+from socketserver import ThreadingMixIn
+
+from prometheus_client import Summary, Gauge, Info, start_http_server
 
 start = time.time()
 
@@ -24,9 +26,10 @@ def generate_request_handler(average_latency_seconds, error_ratio, outage_durati
 def handler_404(self):
   self.send_response(404)
 
-      
+REQUEST_TIME = Summary("request_processing_seconds", "Time spent processing requests")
+
 ROUTES = {
-    ('GET', "/"): lambda self: self.wfile.write("Hello World!"),
+    ('GET', "/"): lambda self: self.wfile.write(b"Hello World!"),
     ('GET', "/favicon.ico"): lambda self: self.send_response(404),
     ('GET', "/api/foo"): generate_request_handler(.01, .005, 23.0),
     ('POST', "/api/foo"): generate_request_handler(.02, .02, 60.0),
@@ -35,6 +38,8 @@ ROUTES = {
 }
 
 class Handler(BaseHTTPRequestHandler):
+
+    @REQUEST_TIME.time()
     def do_GET(self):
       ROUTES.get(('GET', self.path), handler_404)(self)
 
@@ -47,4 +52,5 @@ class MultiThreadedHTTPServer(ThreadingMixIn, HTTPServer):
 class Server(threading.Thread):
     def run(self):
         httpd = MultiThreadedHTTPServer(('', 8081), Handler)
+        start_http_server(8082)
         httpd.serve_forever()
